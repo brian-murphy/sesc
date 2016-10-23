@@ -424,20 +424,6 @@ public:
 
     static BPred *getBPred(int32_t id, int32_t fetchWidth, const char *sec);
 
-    void recordPredictionResult(const Instruction *instruction, PredType prediction) {
-         HistoryType instructionId = pred->calcInstID(instruction);
-
-         if (predictionRecords.find(instructionId) == predictionRecords.end()) {
-             predictionRecords[instructionId] = { 0, 0 };
-         } 
-
-         if (prediction == CorrectPrediction) {
-             predictionRecords[instructionId].correctPredictions += 1;
-         } else {
-             predictionRecords[instructionId].mispredictions += 1;
-         }
-    }
-
     PredType predict(const Instruction *inst, InstID oracleID, bool doUpdate) {
         I(inst->isBranch());
 
@@ -452,10 +438,6 @@ public:
 
         p = pred->doPredict(inst, oracleID, doUpdate);
 
-        if (inst->isBranch()) {
-            recordPredictionResult(inst, p);
-        }
-
         nMiss.cinc(p != CorrectPrediction && doUpdate);
 
         return p;
@@ -469,55 +451,6 @@ public:
 
     void switchOut(Pid_t pid) {
         pred->switchOut(pid);
-        printResults();
-    }
-
-    void printResults() {
-        int numInstructionsExecutedLessThan10Times = 0;
-        int numInstructionsExecuted10To99Times = 0;
-        int numInstructionsExecuted100To999Times = 0;
-        int numInstructionsExecutedMoreThan999Times = 0;
-
-        int numCorrectPredictionsLessThan10Times = 0;
-        int numMispredictionsLessThan10Times = 0;
-        int numCorrectPredictions10To99Times = 0;
-        int numMispredictions10To99Times = 0;
-        int numCorrectPredictions100To999Times = 0;
-        int numMispredictions100To999Times = 0;
-        int numCorrectPredictionsMoreThan999Times = 0;
-        int numMispredictionsMoreThan999Times = 0;
-
-        for (auto kv : predictionRecords) {
-            BranchRecord record = kv.second;
-
-            int totalExecutions = record.correctPredictions + record.mispredictions;
-
-            if (totalExecutions < 10) {
-                numInstructionsExecutedLessThan10Times += 1;
-                numCorrectPredictionsLessThan10Times += record.correctPredictions;
-                numMispredictionsLessThan10Times += record.mispredictions;
-            } else if (totalExecutions >= 10 && totalExecutions < 100) {
-                numInstructionsExecuted10To99Times += 1;
-                numCorrectPredictions10To99Times += record.correctPredictions;
-                numMispredictions10To99Times += record.mispredictions;
-            } else if (totalExecutions >= 100 && totalExecutions < 1000) {
-                numInstructionsExecuted100To999Times += 1;
-                numCorrectPredictions100To999Times += record.correctPredictions;
-                numMispredictions100To999Times += record.mispredictions;
-            } else if (totalExecutions >= 1000) {
-                numInstructionsExecutedMoreThan999Times += 1;
-                numCorrectPredictionsMoreThan999Times += record.correctPredictions;
-                numMispredictionsMoreThan999Times += record.mispredictions;
-            }
-        }
-        printf("Instructions Executed \n1-9 Times:\t%d \n10-99 Times:\t%d \n100-999 Times:\t%d \n1000+ Times:\t%d\n\n", numInstructionsExecutedLessThan10Times, numInstructionsExecuted10To99Times, numInstructionsExecuted100To999Times, numInstructionsExecutedMoreThan999Times);
-        
-        float accuracyInstructionsExecutedLessThan10Times = ((float) numCorrectPredictionsLessThan10Times) / ((float) (numCorrectPredictionsLessThan10Times + numMispredictionsLessThan10Times));
-        float accuracyInstructionsExecuted10To99Times = ((float) numCorrectPredictions10To99Times) / ((float) (numCorrectPredictions10To99Times + numMispredictions10To99Times));
-        float accuracyInstructionsExecuted100To999Times = ((float) numCorrectPredictions100To999Times) / ((float) (numCorrectPredictions100To999Times + numMispredictions100To999Times));
-        float accuracyInstructionsExecutedMoreThan999Times = ((float) numCorrectPredictionsMoreThan999Times) / ((float) (numCorrectPredictionsMoreThan999Times + numMispredictionsMoreThan999Times));
-        
-        printf("Accuracies for instructions executed \n1-9Times:\t%f \n10-99 Times:\t%f \n100-999 Times:\t%f \n 1000+ Times:\t%f\n\n", accuracyInstructionsExecutedLessThan10Times, accuracyInstructionsExecuted10To99Times, accuracyInstructionsExecuted100To999Times, accuracyInstructionsExecutedMoreThan999Times);
     }
 };
 
